@@ -3,42 +3,44 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ingener-vladimir/go_practices/http_scheduler/cmd/internal/model"
+	"github.com/ingener-vladimir/go_practices/http_scheduler/internal/custom_client"
+	"github.com/ingener-vladimir/go_practices/http_scheduler/internal/model"
 	"log"
-	"net"
+	"strconv"
 	"sync"
 	"time"
 )
 
+const PORT = 8090
+
 func main() {
 	wg := &sync.WaitGroup{}
-	for i := 0; i < 10; i++ {
-		fmt.Println("Создание клиента", i+1)
-		//client, err := net.Dial("TCP", "localhost:8000")
-		//if err != nil {
-		//	log.Println("Ошибка создания подключения к серверу клиентом", i+1)
-		//	continue
-		//}
+	for i := 0; i < 1; i++ {
 		wg.Add(1)
-		go connect(i+1, wg, nil)
+		go sendingProcess(i+1, wg)
 	}
 	wg.Wait()
 }
 
-func connect(seq int, wg *sync.WaitGroup, conn net.Conn) {
-	//defer conn.Close()
+func sendingProcess(seq int, wg *sync.WaitGroup) {
 	defer wg.Done()
-
-	p := model.New(seq, 25, "Ivan", true)
-	data, errMarsh := json.Marshal(p)
-	if errMarsh != nil {
-		log.Fatal("Ошибка маршалинга сообщения")
-	}
-	for {
-		select {
-		case <-time.Tick(time.Second * time.Duration(seq)):
-			fmt.Println(seq, data)
-			//conn.Write(data)
+	select {
+	case <-time.Tick(time.Second * time.Duration(seq)):
+		fmt.Println("Создание клиента", seq)
+		if client := custom_client.New(PORT); client != nil {
+			defer client.Close()
+			var countMessage int
+			for {
+				p := model.New(seq, 25, "Ivan_"+strconv.Itoa(countMessage), true)
+				data, errMarsh := json.Marshal(p)
+				if errMarsh != nil {
+					log.Fatal("Ошибка маршалинга сообщения")
+				}
+				fmt.Println("Будет отправлено сообщение:", string(data))
+				client.Write(data)
+				countMessage++
+				time.Sleep(time.Second * (time.Duration(seq)))
+			}
 		}
 	}
 }
