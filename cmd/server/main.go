@@ -1,3 +1,7 @@
+/*
+	Сервер слушает входящие соединения на порту, переданном в аргументах запуска.
+	Считывает входящий поток, демаршалит данные и складывает в хранилище
+*/
 package main
 
 import (
@@ -45,7 +49,7 @@ func requestProcess(conn *server.TcpAcceptedConn, persons *storage.PersonsStorag
 			}
 		}
 		var p model.Person
-		errMarsh := utils.JsonUnmarshal(bytes, &p)
+		errMarsh := jsonutils.Unmarshal(bytes, &p)
 		if errMarsh != nil {
 			return
 		}

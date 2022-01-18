@@ -1,3 +1,7 @@
+/*
+	Пакет storage хранит в виде key-value принятые сообщения
+*/
+
 package storage
 
 import (

@@ -1,3 +1,7 @@
+/*
+	Через равный промежуток времени (1 сек) создается TCP-клиент, который подключается к серверу по порту из аргументов,
+	и выполняется отправка на сервер сообщений
+*/
 package main
 
 import (
@@ -29,31 +33,29 @@ func main() {
 
 func sendingProcess(port string, seq int, wg *sync.WaitGroup) {
 	defer wg.Done()
-	select {
-	case <-time.Tick(time.Second * time.Duration(seq)):
-		log.Println("Создание клиента", seq)
-		client, err := client.NewTcpClient(port)
-		if err != nil {
-			log.Printf("Ошибка создания нового подключения %d: %v\n", seq, err)
+	<-time.Tick(time.Second * time.Duration(seq))
+	log.Println("Создание клиента", seq)
+	client, err := client.NewTcpClient(port)
+	if err != nil {
+		log.Printf("Ошибка создания нового подключения %d: %v\n", seq, err)
+		return
+	}
+
+	defer client.Close()
+	var countMessage int
+	for {
+		p := model.New(seq, 25, "Ivan_"+strconv.Itoa(countMessage), true)
+		data, errMarsh := json.Marshal(p)
+		if errMarsh != nil {
+			log.Printf("Ошибка маршалинга сообщения %v: %v", p, err)
+			continue
+		}
+		fmt.Println("Будет отправлено сообщение:", p)
+		if _, errWrite := client.Write(data); errWrite != nil {
+			log.Println("Ошибка отправки сообщения", errWrite)
 			return
 		}
-
-		defer client.Close()
-		var countMessage int
-		for {
-			p := model.New(seq, 25, "Ivan_"+strconv.Itoa(countMessage), true)
-			data, errMarsh := json.Marshal(p)
-			if errMarsh != nil {
-				log.Printf("Ошибка маршалинга сообщения %v: %v", p, err)
-				continue
-			}
-			fmt.Println("Будет отправлено сообщение:", p)
-			if _, errWrite := client.Write(data); errWrite != nil {
-				log.Println("Ошибка отправки сообщения", errWrite)
-				return
-			}
-			countMessage++
-			time.Sleep(time.Second * (time.Duration(seq)))
-		}
+		countMessage++
+		time.Sleep(time.Second * (time.Duration(seq)))
 	}
 }
